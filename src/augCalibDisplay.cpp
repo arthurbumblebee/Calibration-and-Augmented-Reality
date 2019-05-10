@@ -24,6 +24,19 @@
 using namespace cv;
 using namespace std;
 
+// a method that converts the corner_set coordinates from image-relative 
+// coordinates to coordinates relative to the real world
+vector<Point3f> generatePointSet(Size boardSize){
+	vector<Point3f> pointSet;
+	for (int i = 0; i < boardSize.height; i++){
+		for (int j = 0; j < boardSize.height; j++){
+			Point3f point(j, -i, 0);
+			pointSet.push_back(point);
+		}
+	}
+	return pointSet;
+}
+
 int main(int argc, char *argv[]) {
 	VideoCapture *capdev;
 	char label[256];
@@ -49,12 +62,18 @@ int main(int argc, char *argv[]) {
 	namedWindow("Video", 1); // identifies a window?
 
 	// matrices to hold multiple image outputs, etc
-	Mat frame;
+	Mat frame, frameGray;
+	vector<Point2f> corner_set;
+	vector<Point3f>point_set;
+	vector<vector<Point2f>> corner_list;
+	vector<vector<Point3f>> point_list;
+	int columns, rows, chessBoardFlags;
+	bool targetFound;
+
 
 	for(;!quit;) {
 		
 		*capdev >> frame; // get a new frame from the camera, treat as a stream
-		// frame = imread("../data/training/donut.001.png");
 
 		if( frame.empty() ) {
 		  printf("frame is empty\n");
@@ -62,18 +81,15 @@ int main(int argc, char *argv[]) {
 		}
 
 		// find the positions of internal corners of the chessboard
-		vector<Point2f> corner_set;
-		int columns = 9;
-		int rows = 6;
-		bool targetFound;
+		columns = 9;
+		rows = 6;
 		Size boardSize(columns, rows);
-		int chessBoardFlags = CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK;
+		chessBoardFlags = CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK;
 
 		targetFound = findChessboardCorners( frame, boardSize, corner_set, chessBoardFlags);
 
 		if (targetFound){
 			// improve the found corners' coordinate accuracy for chessboard
-			Mat frameGray;
 			cvtColor(frame, frameGray, COLOR_BGR2GRAY);
 			cornerSubPix( frameGray, corner_set, Size(11,11),
 				Size(-1,-1), TermCriteria( TermCriteria::EPS+TermCriteria::COUNT, 30, 0.1 ));
@@ -85,12 +101,29 @@ int main(int argc, char *argv[]) {
 		
 		}
 
+
+
 		// display the video frame in the window
 		imshow("Video", frame);
 
 		// respond to keypresses
 		int key = waitKey(10);
 		switch(key) {
+			// s store vector corners found by findboardcorners into list
+			case 's':
+				printf("saving calibration\n");
+				corner_list.push_back(corner_set);
+				point_list.push_back(generatePointSet(boardSize));
+				// save current calibration image
+				imwrite("../data/calib" +to_string(corner_list.size())+ ".png", frame);
+				break;
+
+			// c calibrate
+			case 'c':
+				if(){
+					
+				}
+
 			// q quits the program
 			case 'q':
 				quit = 1;
@@ -102,10 +135,7 @@ int main(int argc, char *argv[]) {
 				imwrite(buffer, frame, pars);
 				printf("Image written: %s\n", buffer);
 				break;
-			case 't':
-				quit = 1;
-				break;
-
+			
 			default:
 				break;
 		}
