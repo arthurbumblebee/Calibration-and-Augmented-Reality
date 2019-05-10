@@ -12,8 +12,14 @@
 */
 
 #include <cstdio>
-#include "opencv2/imgproc/imgproc.hpp"
+#include <cstring>
+
 #include "opencv2/opencv.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/calib3d.hpp"
+
 
 using namespace cv;
 using namespace std;
@@ -55,7 +61,29 @@ int main(int argc, char *argv[]) {
 		  break;
 		}
 
+		// find the positions of internal corners of the chessboard
+		vector<Point2f> corner_set;
+		int columns = 9;
+		int rows = 6;
+		bool targetFound;
+		Size boardSize(columns, rows);
+		int chessBoardFlags = CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK;
+
+		targetFound = findChessboardCorners( frame, boardSize, corner_set, chessBoardFlags);
+
+		if (targetFound){
+			// improve the found corners' coordinate accuracy for chessboard
+			Mat frameGray;
+			cvtColor(frame, frameGray, COLOR_BGR2GRAY);
+			cornerSubPix( frameGray, corner_set, Size(11,11),
+				Size(-1,-1), TermCriteria( TermCriteria::EPS+TermCriteria::COUNT, 30, 0.1 ));
+                
+			// Draw the corners.
+			drawChessboardCorners( frame, boardSize, Mat(corner_set), targetFound );
+			// printf("number of corners = %lu \n", corner_set.size());
+			// printf("coordinates of first corner (x, y) : (%f, %f) \n", corner_set[0].x , corner_set[0].y);
 		
+		}
 
 		// display the video frame in the window
 		imshow("Video", frame);
