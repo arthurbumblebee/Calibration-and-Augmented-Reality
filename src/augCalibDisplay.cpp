@@ -75,6 +75,8 @@ int main(int argc, char *argv[]) {
 	cameraMatrix.at<float>(1,2) = frame.rows/2;
 
 	Mat distCoeffs = Mat::zeros(8, 1, CV_64F);
+	vector<Mat> rotationVecs, translationVecs;
+	Mat rotation_vector, translation_vector;
 
 	for(;!quit;) {
 		
@@ -93,6 +95,17 @@ int main(int argc, char *argv[]) {
 		chessBoardFlags = CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK;
 
 		targetFound = findChessboardCorners( frame, boardSize, corner_set, chessBoardFlags);
+		point_set = generatePointSet(boardSize);
+
+		printf("reading calibrations\n");
+		FileStorage fsCam (camera_parameters_file, FileStorage::READ);
+		FileStorage fsCoeff (dist_coeffs_file, FileStorage::READ);
+		if (!fsCam.isOpened() | !fsCoeff.isOpened()){
+			cerr << "failed to open parameters files" << endl;
+			return 1;
+		}
+		fsCam["cameraMatrix"] >> cameraMatrix;
+		fsCoeff["distCoeffs"] >> distCoeffs;
 
 		if (targetFound){
 			// improve the found corners' coordinate accuracy for chessboard
@@ -101,9 +114,16 @@ int main(int argc, char *argv[]) {
 				Size(-1,-1), TermCriteria( TermCriteria::EPS+TermCriteria::COUNT, 30, 0.1 ));
                 
 			// Draw the corners.
-			drawChessboardCorners( frame, boardSize, Mat(corner_set), targetFound );
+			// drawChessboardCorners( frame, boardSize, Mat(corner_set), targetFound );
 			// printf("number of corners = %lu \n", corner_set.size());
 			// printf("coordinates of first corner (x, y) : (%f, %f) \n", corner_set[0].x , corner_set[0].y);
+
+			// calculate board's pose(rotation and translation)
+			solvePnP(point_set, corner_set, cameraMatrix, distCoeffs, rotation_vector, translation_vector);
+			cout << "rotation vector : " << rotation_vector << endl;
+			cout << "translation vector : " << translation_vector << endl;
+		
+			// 
 		
 		}
 
@@ -114,12 +134,20 @@ int main(int argc, char *argv[]) {
 		// respond to keypresses
 		int key = waitKey(10);
 		switch(key) {
+			case 'd':
+			{
+			// Draw the corners.
+			drawChessboardCorners( frame, boardSize, Mat(corner_set), targetFound );
+			
+			break;
+			}
+
 			// s store vector corners found by findboardcorners into list
 			case 's':
 			{
 				printf("saving calibration\n");
 				corner_list.push_back(corner_set);
-				point_list.push_back(generatePointSet(boardSize));
+				point_list.push_back(point_set);
 				// save current calibration image
 				imwrite("../data/calib" +to_string(corner_list.size())+ ".png", frame);
 		
@@ -137,14 +165,13 @@ int main(int argc, char *argv[]) {
 					// cout << corner_list[0].size() << endl;
 					// cout << point_list[0].size() << endl;
 
-					vector<Mat> rotationVecs, translationVecs;
 					int flag = CALIB_FIX_ASPECT_RATIO;
 					double reProjectionError = calibrateCamera(point_list, corner_list, frame.size(), cameraMatrix, distCoeffs, rotationVecs, translationVecs, flag);
 
 					cout << "reProjectionError : " << reProjectionError << endl;
 					cout << "cameraMatrix \n" << cameraMatrix << endl;
 					cout << "distCoeffs \n" << distCoeffs << endl;
-					cout << "frame.cols/2 \n" << frame.cols/2 << "  frame.rows/2\n" << frame.rows/2 << endl;
+					cout << "frame.cols/2 :" << frame.cols/2 << "\nframe.rows/2 :" << frame.rows/2 << endl;
 
 					// writing to files
 					FileStorage file1(camera_parameters_file, FileStorage::WRITE);
