@@ -8,15 +8,16 @@
 	make aug
 */
 
-#include <cstdio>
-#include <cstring>
-
 #include "opencv2/opencv.hpp"
 #include "opencv2/core.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/calib3d.hpp"
 
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <stdio.h>
 
 using namespace cv;
 using namespace std;
@@ -66,17 +67,19 @@ int main(int argc, char *argv[]) {
 	vector<vector<Point3f>> point_list;
 	int columns, rows, chessBoardFlags;
 	bool targetFound;
+	string camera_parameters_file = "camParameters.xml";
+	string dist_coeffs_file = "distCoeffs.xml";
 
 	Mat cameraMatrix = Mat::eye(3, 3, CV_64FC1);
 	cameraMatrix.at<float>(0,2) = frame.cols/2;
-    cameraMatrix.at<float>(1,2) = frame.rows/2;
+	cameraMatrix.at<float>(1,2) = frame.rows/2;
 
 	Mat distCoeffs = Mat::zeros(8, 1, CV_64F);
 
 	for(;!quit;) {
 		
-		// *capdev >> frame; // get a new frame from the camera, treat as a stream
-		frame = imread("../data/checkerboard.png");
+		*capdev >> frame; // get a new frame from the camera, treat as a stream
+		// frame = imread("../data/checkerboard.png");
 
 		if( frame.empty() ) {
 		  printf("frame is empty\n");
@@ -113,24 +116,20 @@ int main(int argc, char *argv[]) {
 		switch(key) {
 			// s store vector corners found by findboardcorners into list
 			case 's':
+			{
 				printf("saving calibration\n");
 				corner_list.push_back(corner_set);
 				point_list.push_back(generatePointSet(boardSize));
 				// save current calibration image
 				imwrite("../data/calib" +to_string(corner_list.size())+ ".png", frame);
-				
-				// writing to files
-				FileStorage fs1("camParameters.xml", FileStorage::WRITE);
-				fs1 << "cameraMatrix" << cameraMatrix;
-
-				FileStorage fs2("distCoeffs.xml", FileStorage::WRITE);
-				fs2 << "distCoeffs" << distCoeffs;
-
+		
 				break;
+			}
 
 			// c calibrate If the user has selected enough calibration frames
 				// --require at least 5--then let the user run a calibration
 			case 'c':
+			{
 				if(corner_list.size() >= 1){
 					printf("Calibrating...\n");
 					// cout << corner_list.size() << endl;
@@ -147,21 +146,33 @@ int main(int argc, char *argv[]) {
 					cout << "distCoeffs \n" << distCoeffs << endl;
 					cout << "frame.cols/2 \n" << frame.cols/2 << "  frame.rows/2\n" << frame.rows/2 << endl;
 
+					// writing to files
+					FileStorage file1(camera_parameters_file, FileStorage::WRITE);
+					file1 << "cameraMatrix" << cameraMatrix;
+
+					FileStorage file2(dist_coeffs_file, FileStorage::WRITE);
+					file2 << "distCoeffs" << distCoeffs;
+
 				}
 				break;
+			}
 
 			// q quits the program
 			case 'q':
+			{
 				quit = 1;
 				break;
+			}
 
 			// capture a photo if the user hits c
 			case 'p': 
+			{
 				sprintf(buffer, "%s.%03d.png", label, frameid++);
 				imwrite(buffer, frame, pars);
 				printf("Image written: %s\n", buffer);
 				break;
-			
+			}
+
 			default:
 				break;
 		}
