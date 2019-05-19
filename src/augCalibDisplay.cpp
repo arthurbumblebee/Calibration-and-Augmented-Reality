@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
 		targetFound = findChessboardCorners( frame, boardSize, corner_set, chessBoardFlags);
 		point_set = generatePointSet(boardSize);
 
-		printf("reading calibrations\n");
+		// printf("reading calibrations\n");
 		FileStorage fsCam (camera_parameters_file, FileStorage::READ);
 		FileStorage fsCoeff (dist_coeffs_file, FileStorage::READ);
 		if (!fsCam.isOpened() | !fsCoeff.isOpened()){
@@ -120,11 +120,52 @@ int main(int argc, char *argv[]) {
 
 			// calculate board's pose(rotation and translation)
 			solvePnP(point_set, corner_set, cameraMatrix, distCoeffs, rotation_vector, translation_vector);
-			cout << "rotation vector : " << rotation_vector << endl;
-			cout << "translation vector : " << translation_vector << endl;
+			// cout << "rotation vector : " << rotation_vector << endl;
+			// cout << "translation vector : " << translation_vector << endl;
 		
-			// 
+			// project 3d points
+			vector<Point3d> corner_point3D;
+			vector<Point2d> corner_point2D;
+			corner_point3D.push_back(Point3d(0, 0, 0));
+			corner_point3D.push_back(Point3d(1, 0, 0));
+			corner_point3D.push_back(Point3d(0,-2, 0));
+			corner_point3D.push_back(Point3d(0, 0, 3));
+			projectPoints(corner_point3D, rotation_vector, translation_vector, cameraMatrix, distCoeffs, corner_point2D);
+
+			// draw axes, x, y, z from origin
+			line( frame, corner_point2D[0], corner_point2D[1], Scalar( 0, 0, 255 ), 2 ); // x axis
+			line( frame, corner_point2D[0], corner_point2D[2], Scalar( 0, 255, 0 ), 2 ); // y axis
+			line( frame, corner_point2D[0], corner_point2D[3], Scalar( 255, 0, 0 ), 2 ); // z axis
+
+			circle(frame, corner_point2D[0], 5, Scalar(255,100,0), -1, LINE_AA, 0);
 		
+			// project a cube to the board
+			vector<Point3d> cube3D;
+			vector<Point2d> cube2D;
+			cube3D.push_back(Point3d(3, 0, 0));
+			cube3D.push_back(Point3d(3, -3, 0));
+			cube3D.push_back(Point3d(6, 0, 0));
+			cube3D.push_back(Point3d(6, -3, 0));
+			cube3D.push_back(Point3d(3, 0, 3));
+			cube3D.push_back(Point3d(6, 0, 3));
+			cube3D.push_back(Point3d(6, -3, 3));
+			cube3D.push_back(Point3d(3, -3, 3));
+
+			projectPoints(cube3D, rotation_vector, translation_vector, cameraMatrix, distCoeffs, cube2D);
+
+			line( frame, cube2D[0], cube2D[1], Scalar( 100, 100, 255 ), 2);
+			line( frame, cube2D[0], cube2D[2], Scalar( 100, 100, 255 ), 2);
+			line( frame, cube2D[1], cube2D[3], Scalar( 100, 100, 255 ), 2);
+			line( frame, cube2D[2], cube2D[3], Scalar( 100, 100, 255 ), 2);
+			line( frame, cube2D[2], cube2D[5], Scalar( 100, 100, 255 ), 2);
+			line( frame, cube2D[4], cube2D[5], Scalar( 100, 100, 255 ), 2);
+			line( frame, cube2D[7], cube2D[6], Scalar( 100, 100, 255 ), 2);
+			line( frame, cube2D[1], cube2D[7], Scalar( 100, 100, 255 ), 2);
+			line( frame, cube2D[0], cube2D[4], Scalar( 100, 100, 255 ), 2);
+			line( frame, cube2D[5], cube2D[6], Scalar( 100, 100, 255 ), 2);
+			line( frame, cube2D[3], cube2D[6], Scalar( 100, 100, 255 ), 2);
+			line( frame, cube2D[4], cube2D[7], Scalar( 100, 100, 255 ), 2);
+
 		}
 
 
@@ -194,9 +235,11 @@ int main(int argc, char *argv[]) {
 			// capture a photo if the user hits c
 			case 'p': 
 			{
-				sprintf(buffer, "%s.%03d.png", label, frameid++);
+				sprintf(buffer, "../data/board%03d.png", frameid++);
 				imwrite(buffer, frame, pars);
 				printf("Image written: %s\n", buffer);
+				// imwrite("../data/board%03d.png" , frame);
+
 				break;
 			}
 
