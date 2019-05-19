@@ -4,8 +4,10 @@
 	Simple example of Calibration and Augmented Reality
 	Based on OpenCV tutorials
 
-	use the makefiles provided
+	use the makefiles provided to run
 	make aug
+	../bin/aug test
+
 */
 
 #include "opencv2/opencv.hpp"
@@ -232,7 +234,7 @@ int main(int argc, char *argv[]) {
 				break;
 			}
 
-			// capture a photo if the user hits c
+			// capture a photo if the user hits p
 			case 'p': 
 			{
 				sprintf(buffer, "../data/board%03d.png", frameid++);
