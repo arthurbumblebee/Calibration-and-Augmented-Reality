@@ -201,7 +201,7 @@ int main(int argc, char *argv[]) {
 				// --require at least 5--then let the user run a calibration
 			case 'c':
 			{
-				if(corner_list.size() >= 1){
+				if(corner_list.size() >= 5){
 					printf("Calibrating...\n");
 					// cout << corner_list.size() << endl;
 					// cout << point_list.size() << endl;
